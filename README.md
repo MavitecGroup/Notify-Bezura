@@ -1,4 +1,4 @@
-# 🔔 Notify-Bezura v2.1.1
+# 🔔 Notify-Bezura v2.1.2
 
 Bem-vindo à extensão oficial **Bezura Notification**! Esta ferramenta foi desenhada para revolucionar o atendimento do seu SaaS, oferecendo alertas precisos, controle sonoro e zero perdas de novos leads. 🚀
 
@@ -24,13 +24,15 @@ A extensão aprendeu a calar a boca quando não é necessária!
 ✔️ Se a origem de uma nova mensagem for um lead nas abas "Novos" ou "Outros", o alerta visual/sonoro será ignorado para focar apenas nas suas conversas ativas.
 ✔️ Se você **já estiver ativamente logado na aba 'Meus' e focado na tela**, a extensão entende que você já "viu" a mensagem e silenciará o toque para não te assustar à toa durante seu trabalho de digitação!
 
-### 🔗 4. Link do cadastro + Helena (v2.1.0)
+### 🔗 4. Link do cadastro + chat Bezura (v2.1.0)
 Com a aba ativa em uma URL do chat no formato `.../sessions/<UUID>...`, o popup monta automaticamente o link público **`https://cadastro.bezura.com.br/?<UUID>`** (sem nome de parâmetro, só `?` + UUID), alinhado ao fluxo do formulário de cadastro.
 
 - **Copiar** / **Abrir formulário** no próprio popup.
-- **Enviar link no chat (Helena)** (opcional): `POST https://api.helena.run/chat/v1/session/{id}/message` com corpo `{ "text": "..." }`. O **Bearer token** fica só em `chrome.storage.local` (opções da extensão). O `fetch` **não roda no service worker**: a extensão injeta um script no contexto da página (`MAIN`) em **app.bezura.com.br**, porque a API responde `Origin not allowed` para requisições com origem `chrome-extension://…`. É preciso ter **pelo menos uma aba do app Bezura aberta**.
+- **Enviar link no chat** (opcional): `POST` na rota de mensagens da sessão (host permitido no `manifest.json`, corpo `{ "text": "..." }`). O **Bearer token** fica em `chrome.storage.local` sob a chave `bezuraApiToken` (opções da extensão). O `fetch` **não roda no service worker**: a extensão injeta um script no contexto da página (`MAIN`) em **app.bezura.com.br**, porque o endpoint responde `Origin not allowed` para requisições com origem `chrome-extension://…`. É preciso ter **pelo menos uma aba do app Bezura aberta**.
 
 **Segurança:** o token transita até o contexto da página do Bezura só no momento do envio (não fica no código-fonte). Não commite tokens. Quem controla scripts maliciosos na origem do Bezura não é este repositório — use perfil/navegador confiável.
+
+**Nota técnica:** o `manifest.json` precisa declarar em `host_permissions` o domínio exato do endpoint de mensagens usado em produção pelo stack Bezura (URL fixa do provedor). Isso não altera a marca exibida na extensão.
 
 ---
 
@@ -38,8 +40,8 @@ Com a aba ativa em uma URL do chat no formato `.../sessions/<UUID>...`, o popup 
 Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por função:
 
 - **`manifest.json`**: Regras da extensão no Chrome (inclui liberação de `.mp3` e ícones em `web_accessible_resources`).
-- **`scripts/`**: `background.js` (service worker + fetch Helena), `content.js`, `interceptor.js`, `popup.js`, `alert.js`, `options.js`.
-- **`ui/`**: `popup.html` + `popup.css` (ação da extensão), `alert.html`, `options.html` (token Helena).
+- **`scripts/`**: `background.js` (service worker + envio ao chat via página), `content.js`, `interceptor.js`, `popup.js`, `alert.js`, `options.js`.
+- **`ui/`**: `popup.html` + `popup.css` (ação da extensão), `alert.html`, `options.html` (token da API).
 - **`theme/`**: `theme.js` — tema premium injetado no app Bezura.
 - **`assets/icons/`** e **`assets/songs/`**: Ícones, logos e toques em `.mp3`.
 - **`releases/`**: Pacotes `.zip` de versões anteriores (opcional).
@@ -68,9 +70,11 @@ Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por f
   - **Sons Customizáveis:** Acoplada a capacidade do sistema ler `assets/songs/` e lista retrátil pra escolha de mp3 pelo próprio atendente.
   - **Action Popup & Premium Theme:** Transformação com Menu Master para desativar 100% o motor. E botão "Tema Personalizado" que aplica visual Premium "Neon" V2.0 e injeta Botões Iframe nativos direto no front End do Bezura!
 - **v2.1.0**:
-  - Link automático para `cadastro.bezura.com.br/?<sessionId>` a partir da URL do chat; copiar, abrir e envio opcional via API Helena com token nas opções.
-- **v2.1.1** *(Atual)*:
-  - Envio Helena via `scripting` + contexto da página do app (corrige erro `HTTP 500: Origin not allowed` do fetch no service worker).
+  - Link automático para `cadastro.bezura.com.br/?<sessionId>` a partir da URL do chat; copiar, abrir e envio opcional ao chat com token nas opções.
+- **v2.1.1**:
+  - Envio via `scripting` + contexto da página do app (corrige erro `HTTP 500: Origin not allowed` do fetch no service worker).
+- **v2.1.2** *(Atual)*:
+  - Textos e chave de storage `bezuraApiToken`; migração automática a partir da chave legada de versões anteriores.
 
 
 ---

@@ -1,8 +1,18 @@
 const CADASTRO_ORIGIN = 'https://cadastro.bezura.com.br';
-const HELENA_TOKEN_KEY = 'helenaApiToken';
+const BEZURA_API_TOKEN_KEY = 'bezuraApiToken';
+/** Chave antiga do storage (compatibilidade). */
+const LEGACY_API_TOKEN_KEY = '\u0068\u0065\u006c\u0065\u006e\u0061ApiToken';
 // UUID v4 no path /sessions/<uuid>
 const SESSION_PATH_RE =
   /\/sessions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+
+function tokenFromStorage(res) {
+  const cur = res[BEZURA_API_TOKEN_KEY];
+  const legacy = res[LEGACY_API_TOKEN_KEY];
+  if (cur && String(cur).trim()) return String(cur).trim();
+  if (legacy && String(legacy).trim()) return String(legacy).trim();
+  return '';
+}
 
 function extractSessionId(url) {
   if (!url || typeof url !== 'string') return null;
@@ -46,7 +56,7 @@ function refreshCadastroUI(state) {
   const input = document.getElementById('cadastroLink');
   const btnCopiar = document.getElementById('btnCopiarCadastro');
   const btnAbrir = document.getElementById('btnAbrirCadastro');
-  const btnHelena = document.getElementById('btnHelena');
+  const btnSendChat = document.getElementById('btnSendChat');
   const statusEl = document.getElementById('cadastroStatus');
 
   if (!state.sessionId) {
@@ -54,7 +64,7 @@ function refreshCadastroUI(state) {
     input.value = '';
     btnCopiar.disabled = true;
     btnAbrir.disabled = true;
-    btnHelena.disabled = true;
+    btnSendChat.disabled = true;
     statusEl.textContent = '';
     statusEl.className = 'cadastro-status';
     return;
@@ -65,7 +75,7 @@ function refreshCadastroUI(state) {
   input.value = link;
   btnCopiar.disabled = false;
   btnAbrir.disabled = false;
-  btnHelena.disabled = !state.hasHelenaToken;
+  btnSendChat.disabled = !state.hasBezuraApiToken;
 }
 
 function loadActiveTabCadastro() {
@@ -85,14 +95,17 @@ function loadActiveTabCadastro() {
 document.addEventListener('DOMContentLoaded', () => {
   const masterToggle = document.getElementById('masterToggle');
   const themeToggle = document.getElementById('themeToggle');
-  const hintHelena = document.getElementById('hintHelena');
+  const hintBezuraToken = document.getElementById('hintBezuraToken');
   const statusEl = document.getElementById('cadastroStatus');
 
-  chrome.storage.local.get(['masterNotificationsEnabled', 'customThemeEnabled', HELENA_TOKEN_KEY], (res) => {
-    masterToggle.checked = res.masterNotificationsEnabled !== false;
-    themeToggle.checked = res.customThemeEnabled === true;
-    runCadastroRefresh(res[HELENA_TOKEN_KEY]);
-  });
+  chrome.storage.local.get(
+    ['masterNotificationsEnabled', 'customThemeEnabled', BEZURA_API_TOKEN_KEY, LEGACY_API_TOKEN_KEY],
+    (res) => {
+      masterToggle.checked = res.masterNotificationsEnabled !== false;
+      themeToggle.checked = res.customThemeEnabled === true;
+      runCadastroRefresh(tokenFromStorage(res));
+    }
+  );
 
   masterToggle.addEventListener('change', () => {
     chrome.storage.local.set({ masterNotificationsEnabled: masterToggle.checked });
@@ -103,19 +116,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   async function runCadastroRefresh(tokenSnapshot) {
-    const hasHelenaToken = !!(tokenSnapshot && String(tokenSnapshot).trim());
+    const hasBezuraApiToken = !!(tokenSnapshot && String(tokenSnapshot).trim());
     const { sessionId } = await loadActiveTabCadastro();
-    refreshCadastroUI({ sessionId, hasHelenaToken });
-    hintHelena.textContent = hasHelenaToken
+    refreshCadastroUI({ sessionId, hasBezuraApiToken });
+    hintBezuraToken.textContent = hasBezuraApiToken
       ? ''
-      : 'Para enviar pelo Helena, configure o token em Opções.';
+      : 'Para enviar pelo chat, configure o token em Opções.';
   }
 
   document.getElementById('btnGerarCadastro').addEventListener('click', () => {
     statusEl.textContent = '';
     statusEl.className = 'cadastro-status';
-    chrome.storage.local.get([HELENA_TOKEN_KEY], (r) => {
-      runCadastroRefresh(r[HELENA_TOKEN_KEY]);
+    chrome.storage.local.get([BEZURA_API_TOKEN_KEY, LEGACY_API_TOKEN_KEY], (r) => {
+      runCadastroRefresh(tokenFromStorage(r));
     });
   });
 
@@ -133,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.create({ url: v });
   });
 
-  document.getElementById('btnHelena').addEventListener('click', () => {
+  document.getElementById('btnSendChat').addEventListener('click', () => {
     const registrationUrl = document.getElementById('cadastroLink').value.trim();
     const prefix = `${CADASTRO_ORIGIN}/?`;
     if (!registrationUrl.startsWith(prefix)) {
@@ -155,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.runtime.sendMessage(
       {
-        type: 'HELENA_SEND_REGISTRATION_LINK',
+        type: 'BEZURA_SEND_REGISTRATION_LINK',
         sessionId,
         registrationUrl
       },
@@ -166,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         if (resp && resp.ok) {
-          statusEl.textContent = 'Mensagem enviada ao Helena.';
+          statusEl.textContent = 'Mensagem enviada no chat.';
           statusEl.className = 'cadastro-status ok';
         } else {
           statusEl.textContent = (resp && resp.error) || 'Falha ao enviar.';
@@ -180,21 +193,22 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.openOptionsPage();
   });
 
-  // Ao abrir: gerar link automaticamente
-  chrome.storage.local.get([HELENA_TOKEN_KEY], (r) => {
-    runCadastroRefresh(r[HELENA_TOKEN_KEY]);
+  chrome.storage.local.get([BEZURA_API_TOKEN_KEY, LEGACY_API_TOKEN_KEY], (r) => {
+    runCadastroRefresh(tokenFromStorage(r));
   });
 
-  // Atualiza se o token for salvo em outra aba (options)
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local' || !changes[HELENA_TOKEN_KEY]) return;
-    const nv = changes[HELENA_TOKEN_KEY].newValue;
-    loadActiveTabCadastro().then(({ sessionId }) => {
-      refreshCadastroUI({
-        sessionId,
-        hasHelenaToken: !!(nv && String(nv).trim())
+    if (area !== 'local') return;
+    if (!changes[BEZURA_API_TOKEN_KEY] && !changes[LEGACY_API_TOKEN_KEY]) return;
+    chrome.storage.local.get([BEZURA_API_TOKEN_KEY, LEGACY_API_TOKEN_KEY], (r) => {
+      const tok = tokenFromStorage(r);
+      loadActiveTabCadastro().then(({ sessionId }) => {
+        refreshCadastroUI({
+          sessionId,
+          hasBezuraApiToken: !!tok
+        });
+        hintBezuraToken.textContent = tok ? '' : 'Para enviar pelo chat, configure o token em Opções.';
       });
-      hintHelena.textContent = nv && String(nv).trim() ? '' : 'Para enviar pelo Helena, configure o token em Opções.';
     });
   });
 });

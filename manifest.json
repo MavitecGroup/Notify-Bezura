@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bezura Notification",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Notificações de novas mensagens de leads no Bezura.",
   "permissions": [
     "tabs",

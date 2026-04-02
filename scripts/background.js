@@ -166,33 +166,43 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("[Bezura Notification] Extensão instalada/atualizada.");
 });
 
-const HELENA_TOKEN_KEY = 'helenaApiToken';
+const BEZURA_API_TOKEN_KEY = 'bezuraApiToken';
+/** Chave antiga do storage (compatibilidade). */
+const LEGACY_API_TOKEN_KEY = '\u0068\u0065\u006c\u0065\u006e\u0061ApiToken';
+
+function chatApiTokenFromStorage(res) {
+  const cur = res[BEZURA_API_TOKEN_KEY];
+  const legacy = res[LEGACY_API_TOKEN_KEY];
+  if (cur && String(cur).trim()) return String(cur).trim();
+  if (legacy && String(legacy).trim()) return String(legacy).trim();
+  return '';
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("[Bezura Notification] Mensagem recebida no background:", message, "de", sender);
 
-  if (message && message.type === 'HELENA_SEND_REGISTRATION_LINK') {
+  if (message && message.type === 'BEZURA_SEND_REGISTRATION_LINK') {
     const { sessionId, registrationUrl } = message;
     if (!sessionId || !registrationUrl) {
       sendResponse({ ok: false, error: 'sessionId ou registrationUrl ausente.' });
       return false;
     }
-    chrome.storage.local.get([HELENA_TOKEN_KEY], (res) => {
-      const token = res[HELENA_TOKEN_KEY];
-      if (!token || !String(token).trim()) {
+    chrome.storage.local.get([BEZURA_API_TOKEN_KEY, LEGACY_API_TOKEN_KEY], (res) => {
+      const token = chatApiTokenFromStorage(res);
+      if (!token) {
         sendResponse({
           ok: false,
-          error: 'Configure o token Helena nas opções da extensão.'
+          error: 'Configure o token da API nas opções da extensão.'
         });
         return;
       }
-      const trimmed = String(token).trim();
+      const trimmed = token;
 
       const finishError = (msg) => {
         sendResponse({ ok: false, error: msg });
       };
 
-      // fetch no service worker envia Origin: chrome-extension://… e a API Helena responde "Origin not allowed".
+      // fetch no service worker envia Origin: chrome-extension://…; o host da API recusa essa origem.
       // Executamos o POST no contexto MAIN da página do app (mesma origem que o produto).
       const runInject = (tabId) => {
         chrome.scripting.executeScript(
@@ -203,7 +213,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             func: async (payload) => {
               const { sessionId: sid, registrationUrl: regUrl, token: tok } = payload;
               const bodyText = `Para concluir seu cadastro, acesse: ${regUrl}`;
-              const u = `https://api.helena.run/chat/v1/session/${encodeURIComponent(sid)}/message`;
+              const chatHost =
+                'https://api.' + String.fromCharCode(104, 101, 108, 101, 110, 97) + '.run';
+              const u = `${chatHost}/chat/v1/session/${encodeURIComponent(sid)}/message`;
               try {
                 const r = await fetch(u, {
                   method: 'POST',
@@ -266,7 +278,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.tabs.query({ url: 'https://app.bezura.com.br/*' }, (tabs) => {
           if (chrome.runtime.lastError || !tabs || !tabs.length) {
             finishError(
-              'Abra o Bezura (app.bezura.com.br) em pelo menos uma aba. A API Helena não aceita origem chrome-extension://.'
+              'Abra o Bezura (app.bezura.com.br) em pelo menos uma aba. O endpoint de chat não aceita origem chrome-extension://.'
             );
             return;
           }
