@@ -1,4 +1,4 @@
-# 🔔 Notify-Bezura v2.1.0
+# 🔔 Notify-Bezura v2.1.1
 
 Bem-vindo à extensão oficial **Bezura Notification**! Esta ferramenta foi desenhada para revolucionar o atendimento do seu SaaS, oferecendo alertas precisos, controle sonoro e zero perdas de novos leads. 🚀
 
@@ -28,9 +28,9 @@ A extensão aprendeu a calar a boca quando não é necessária!
 Com a aba ativa em uma URL do chat no formato `.../sessions/<UUID>...`, o popup monta automaticamente o link público **`https://cadastro.bezura.com.br/?<UUID>`** (sem nome de parâmetro, só `?` + UUID), alinhado ao fluxo do formulário de cadastro.
 
 - **Copiar** / **Abrir formulário** no próprio popup.
-- **Enviar link no chat (Helena)** (opcional): `POST https://api.helena.run/chat/v1/session/{id}/message` com corpo `{ "text": "..." }`, feito pelo service worker. O **Bearer token não fica no código**: configure em **Opções da extensão** (`ui/options.html`) → salvo em `chrome.storage.local` (`helenaApiToken`).
+- **Enviar link no chat (Helena)** (opcional): `POST https://api.helena.run/chat/v1/session/{id}/message` com corpo `{ "text": "..." }`. O **Bearer token** fica só em `chrome.storage.local` (opções da extensão). O `fetch` **não roda no service worker**: a extensão injeta um script no contexto da página (`MAIN`) em **app.bezura.com.br**, porque a API responde `Origin not allowed` para requisições com origem `chrome-extension://…`. É preciso ter **pelo menos uma aba do app Bezura aberta**.
 
-**Segurança e CORS:** quem usa o mesmo perfil do navegador pode, em tese, inspecionar o armazenamento da extensão. Não commite tokens. Se a API Helena rejeitar requisições vindas da extensão, use só copiar o link ou um backend/proxy seu.
+**Segurança:** o token transita até o contexto da página do Bezura só no momento do envio (não fica no código-fonte). Não commite tokens. Quem controla scripts maliciosos na origem do Bezura não é este repositório — use perfil/navegador confiável.
 
 ---
 
@@ -67,8 +67,11 @@ Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por f
   - **Reescrita Arquitetural:** Mudança revolucionária de web-scrape para um "API Poller Invisível" capaz de detectar abas independentemente da renderização visual graças ao script pescador `interceptor.js`.
   - **Sons Customizáveis:** Acoplada a capacidade do sistema ler `assets/songs/` e lista retrátil pra escolha de mp3 pelo próprio atendente.
   - **Action Popup & Premium Theme:** Transformação com Menu Master para desativar 100% o motor. E botão "Tema Personalizado" que aplica visual Premium "Neon" V2.0 e injeta Botões Iframe nativos direto no front End do Bezura!
-- **v2.1.0** *(Atual)*:
+- **v2.1.0**:
   - Link automático para `cadastro.bezura.com.br/?<sessionId>` a partir da URL do chat; copiar, abrir e envio opcional via API Helena com token nas opções.
+- **v2.1.1** *(Atual)*:
+  - Envio Helena via `scripting` + contexto da página do app (corrige erro `HTTP 500: Origin not allowed` do fetch no service worker).
+
 
 ---
 _A escalabilidade do seu atendimento está salva! Qualquer dúvida ou pedido de novas features, basta realizar um update._ 🛡️✨

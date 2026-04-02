@@ -186,33 +186,93 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         return;
       }
-      const bodyText = `Para concluir seu cadastro, acesse: ${registrationUrl}`;
-      const url = `https://api.helena.run/chat/v1/session/${encodeURIComponent(sessionId)}/message`;
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${String(token).trim()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ text: bodyText })
-      })
-        .then(async (r) => {
-          if (!r.ok) {
-            const t = await r.text();
-            sendResponse({
-              ok: false,
-              error: `HTTP ${r.status}: ${t.slice(0, 240)}`
-            });
+      const trimmed = String(token).trim();
+
+      const finishError = (msg) => {
+        sendResponse({ ok: false, error: msg });
+      };
+
+      // fetch no service worker envia Origin: chrome-extension://… e a API Helena responde "Origin not allowed".
+      // Executamos o POST no contexto MAIN da página do app (mesma origem que o produto).
+      const runInject = (tabId) => {
+        chrome.scripting.executeScript(
+          {
+            target: { tabId },
+            world: 'MAIN',
+            injectImmediately: true,
+            func: async (payload) => {
+              const { sessionId: sid, registrationUrl: regUrl, token: tok } = payload;
+              const bodyText = `Para concluir seu cadastro, acesse: ${regUrl}`;
+              const u = `https://api.helena.run/chat/v1/session/${encodeURIComponent(sid)}/message`;
+              try {
+                const r = await fetch(u, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${tok}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ text: bodyText })
+                });
+                const text = await r.text();
+                return { ok: r.ok, status: r.status, body: text.slice(0, 400) };
+              } catch (e) {
+                return {
+                  ok: false,
+                  status: 0,
+                  body: e && e.message ? e.message : String(e)
+                };
+              }
+            },
+            args: [{ sessionId, registrationUrl, token: trimmed }]
+          },
+          (results) => {
+            if (chrome.runtime.lastError) {
+              finishError(
+                chrome.runtime.lastError.message ||
+                  'Não foi possível executar no Bezura.'
+              );
+              return;
+            }
+            const row = results && results[0] && results[0].result;
+            if (!row) {
+              finishError('Sem resposta da página do Bezura.');
+              return;
+            }
+            if (row.ok) {
+              sendResponse({ ok: true });
+            } else {
+              const msg =
+                row.status === 0
+                  ? row.body
+                  : `HTTP ${row.status}: ${row.body || ''}`;
+              sendResponse({ ok: false, error: msg });
+            }
+          }
+        );
+      };
+
+      chrome.tabs.query({ active: true, currentWindow: true }, (activeList) => {
+        const active = activeList && activeList[0];
+        const activeOk =
+          active &&
+          active.url &&
+          active.url.startsWith('https://app.bezura.com.br');
+
+        if (activeOk) {
+          runInject(active.id);
+          return;
+        }
+
+        chrome.tabs.query({ url: 'https://app.bezura.com.br/*' }, (tabs) => {
+          if (chrome.runtime.lastError || !tabs || !tabs.length) {
+            finishError(
+              'Abra o Bezura (app.bezura.com.br) em pelo menos uma aba. A API Helena não aceita origem chrome-extension://.'
+            );
             return;
           }
-          sendResponse({ ok: true });
-        })
-        .catch((err) => {
-          sendResponse({
-            ok: false,
-            error: err && err.message ? err.message : String(err)
-          });
+          runInject(tabs[0].id);
         });
+      });
     });
     return true;
   }
