@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Bezura Notification",
-  "version": "2.1.2",
-  "description": "Notificações de novas mensagens de leads no Bezura.",
+  "version": "2.1.3",
+  "description": "Notificações de leads no Bezura, link de cadastro por sessão (/sessions/) e envio ao chat (ABRIR / ENVIAR).",
   "permissions": [
     "tabs",
     "activeTab",

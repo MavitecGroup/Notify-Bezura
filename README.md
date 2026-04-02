@@ -1,4 +1,4 @@
-# 🔔 Notify-Bezura v2.1.2
+# 🔔 Notify-Bezura v2.1.3
 
 Bem-vindo à extensão oficial **Bezura Notification**! Esta ferramenta foi desenhada para revolucionar o atendimento do seu SaaS, oferecendo alertas precisos, controle sonoro e zero perdas de novos leads. 🚀
 
@@ -24,11 +24,12 @@ A extensão aprendeu a calar a boca quando não é necessária!
 ✔️ Se a origem de uma nova mensagem for um lead nas abas "Novos" ou "Outros", o alerta visual/sonoro será ignorado para focar apenas nas suas conversas ativas.
 ✔️ Se você **já estiver ativamente logado na aba 'Meus' e focado na tela**, a extensão entende que você já "viu" a mensagem e silenciará o toque para não te assustar à toa durante seu trabalho de digitação!
 
-### 🔗 4. Link do cadastro + chat Bezura (v2.1.0)
-Com a aba ativa em uma URL do chat no formato `.../sessions/<UUID>...`, o popup monta automaticamente o link público **`https://cadastro.bezura.com.br/?<UUID>`** (sem nome de parâmetro, só `?` + UUID), alinhado ao fluxo do formulário de cadastro.
+### 🔗 4. Link do cadastro + chat Bezura
+Com a aba ativa em uma URL do chat no formato `.../sessions/<UUID>...`, o popup exibe o link público **`https://cadastro.bezura.com.br/?<UUID>`** (sem nome de parâmetro: só `?` + UUID), alinhado ao formulário de cadastro.
 
-- **Copiar** / **Abrir formulário** no próprio popup.
-- **Enviar link no chat** (opcional): `POST` na rota de mensagens da sessão (host permitido no `manifest.json`, corpo `{ "text": "..." }`). O **Bearer token** fica em `chrome.storage.local` sob a chave `bezuraApiToken` (opções da extensão). O `fetch` **não roda no service worker**: a extensão injeta um script no contexto da página (`MAIN`) em **app.bezura.com.br**, porque o endpoint responde `Origin not allowed` para requisições com origem `chrome-extension://…`. É preciso ter **pelo menos uma aba do app Bezura aberta**.
+- Ao abrir o popup, o link é calculado a partir da **aba ativa**.
+- Dois botões: **ABRIR** (abre o cadastro numa nova aba) e **ENVIAR** (envia o link na conversa via API). **Em cada clique**, a extensão **relê a URL da aba ativa** e atualiza o campo antes de agir, para evitar link desatualizado.
+- **ENVIAR** (opcional): `POST` na rota de mensagens da sessão (host em `host_permissions` no `manifest.json`), corpo `{ "text": "..." }`. Token Bearer em `chrome.storage.local` → chave **`bezuraApiToken`** (página de opções). O pedido HTTP é feito a partir do contexto **MAIN** de **app.bezura.com.br** (`scripting`), não do service worker, para não receber `Origin not allowed` (`chrome-extension://`). Mantenha **pelo menos uma aba do app Bezura aberta**.
 
 **Segurança:** o token transita até o contexto da página do Bezura só no momento do envio (não fica no código-fonte). Não commite tokens. Quem controla scripts maliciosos na origem do Bezura não é este repositório — use perfil/navegador confiável.
 
@@ -39,7 +40,7 @@ Com a aba ativa em uma URL do chat no formato `.../sessions/<UUID>...`, o popup 
 ## 📦 Estrutura do Código:
 Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por função:
 
-- **`manifest.json`**: Regras da extensão no Chrome (inclui liberação de `.mp3` e ícones em `web_accessible_resources`).
+- **`manifest.json`**: Manifest V3 — permissões (`tabs`, `activeTab`, `storage`, `alarms`, `cookies`, `scripting`), `host_permissions` (app, cadastro e API de mensagens), `options_page`, `web_accessible_resources` (interceptor, sons, ícones).
 - **`scripts/`**: `background.js` (service worker + envio ao chat via página), `content.js`, `interceptor.js`, `popup.js`, `alert.js`, `options.js`.
 - **`ui/`**: `popup.html` + `popup.css` (ação da extensão), `alert.html`, `options.html` (token da API).
 - **`theme/`**: `theme.js` — tema premium injetado no app Bezura.
@@ -49,11 +50,11 @@ Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por f
 ---
 
 ## 💡 Como instalar para testes (Desenvolvedor):
-1. Acesse `chrome://extensions` no seu navegador Chrome.
-2. Ative o **Modo do Desenvolvedor** no topo superior direito.
-3. Clique no botão superior esquerdo **Carregar sem compactação**.
-4. Selecione esta pasta `Notify-Bezura`.
-5. Faça login na plataforma Bezura normalmente, receba seus atendimentos, gerencie os toques na engrenagem e aproveite!
+1. Acesse `chrome://extensions` no Chrome ou Edge (Chromium).
+2. Ative o **Modo do desenvolvedor**.
+3. **Carregar sem compactação** e selecione a pasta raiz do projeto (`Notify-Bezura`).
+4. Após atualizar arquivos, use **Recarregar** na ficha da extensão.
+5. Faça login no Bezura; para **ENVIAR** no chat, configure o token em **Opções** e mantenha uma aba em `app.bezura.com.br` aberta.
 
 ---
 
@@ -70,11 +71,13 @@ Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por f
   - **Sons Customizáveis:** Acoplada a capacidade do sistema ler `assets/songs/` e lista retrátil pra escolha de mp3 pelo próprio atendente.
   - **Action Popup & Premium Theme:** Transformação com Menu Master para desativar 100% o motor. E botão "Tema Personalizado" que aplica visual Premium "Neon" V2.0 e injeta Botões Iframe nativos direto no front End do Bezura!
 - **v2.1.0**:
-  - Link automático para `cadastro.bezura.com.br/?<sessionId>` a partir da URL do chat; copiar, abrir e envio opcional ao chat com token nas opções.
+  - Link para `cadastro.bezura.com.br/?<sessionId>` a partir da URL do chat; ações no popup e envio opcional ao chat com token nas opções.
 - **v2.1.1**:
-  - Envio via `scripting` + contexto da página do app (corrige erro `HTTP 500: Origin not allowed` do fetch no service worker).
-- **v2.1.2** *(Atual)*:
-  - Textos e chave de storage `bezuraApiToken`; migração automática a partir da chave legada de versões anteriores.
+  - Envio via `scripting` + contexto da página do app (corrige `HTTP 500: Origin not allowed` no service worker).
+- **v2.1.2**:
+  - Nomenclatura Bezura no fluxo de chat; chave `bezuraApiToken` com migração automática da chave legada de storage.
+- **v2.1.3** *(Atual)*:
+  - Popup do cadastro simplificado: apenas **ABRIR** e **ENVIAR**; em cada clique o link é recalculado a partir da aba ativa.
 
 
 ---
