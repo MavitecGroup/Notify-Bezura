@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <title>Bezura v2.0.0</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2926c8;
+      /* Cor do botão principal baseada na imagem */
+      --primary-hover: #E04D5F;
+      --bg-gradient-top: #1A365D;
+      --bg-gradient-bottom: #4299E1;
+      --text-main: #1f2937;
+      --text-muted: #4b5563;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      /* Gradiente de fundo azul escuro brilhante */
+      background: linear-gradient(180deg, var(--bg-gradient-top) 0%, var(--bg-gradient-bottom) 100%);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    /* White card central */
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 45px 30px 30px 30px;
+      text-align: center;
+      width: 90%;
+      max-width: 360px;
+      position: relative;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    /* Sino no topo */
+    .bell-wrapper {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      background-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: swing 2s infinite ease-in-out;
+      transform-origin: top center;
+    }
+
+    /* Desenhando o sino via SVG amarelado com brilho */
+    .bell-wrapper svg {
+      width: 80px;
+      height: 80px;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      margin-top: 10px;
+      letter-spacing: -0.5px;
+      color: #111827;
+      text-transform: uppercase;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .buttons-container {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    /* Botão Principal */
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px rgba(255, 90, 110, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    /* Botão Secundário */
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .btn-secondary:active {
+      transform: translateY(1px);
+    }
+
+    /* Toggle Switch */
+    .settings-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .settings-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+    }
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+    .slider.round {
+      border-radius: 34px;
+    }
+    .slider.round:before {
+      border-radius: 50%;
+    }
+
+    /* Botão de Configurações (Engrenagem) */
+    .settings-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px; /* de volta ao extremo direito */
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      padding: 5px;
+      transition: color 0.2s ease, transform 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-btn:hover {
+      color: #4b5563;
+      transform: rotate(90deg);
+    }
+
+    /* Menu Dropdown de Seleção de Toque */
+    .settings-dropdown {
+      display: none;
+      position: absolute;
+      top: 50px;
+      right: 15px;
+      width: calc(100% - 30px);
+      max-width: 250px;
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid #e5e7eb;
+      text-align: left;
+      z-index: 100;
+    }
+
+    .settings-dropdown.active {
+      display: block;
+    }
+
+    .select-ringtone {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background-color: #f9fafb;
+      font-size: 13px;
+      color: #374151;
+      outline: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .select-ringtone:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    
+    @keyframes slideUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes swing {
+      0% {
+        transform: translateX(-50%) rotate(0deg);
+      }
+
+      20% {
+        transform: translateX(-50%) rotate(15deg);
+      }
+
+      40% {
+        transform: translateX(-50%) rotate(-10deg);
+      }
+
+      60% {
+        transform: translateX(-50%) rotate(5deg);
+      }
+
+      80% {
+        transform: translateX(-50%) rotate(-5deg);
+      }
+
+      100% {
+        transform: translateX(-50%) rotate(0deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <div class="bell-wrapper">
+      <!-- Sino SVG desenhado -->
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16Z"
+          fill="#FBBF24" stroke="#F59E0B" stroke-width="0.5" />
+      </svg>
+    </div>
+
+    <!-- Config button icon -->
+    <button class="settings-btn" id="settingsBtn" aria-label="Configurações" title="Configurar Notificação">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </button>
+
+    <h1>NOVA MENSAGEM</h1>
+    <p>Clique em "Abrir" para ir para o chat.</p>
+
+    <div class="settings-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="soundToggle" checked>
+        <span class="slider"></span>
+      </label>
+      <span class="settings-label">Notificações com som</span>
+    </div>
+
+    <!-- Dropdown Expandível de Som (inicia oculto) -->
+    <div class="settings-dropdown" id="settingsDropdown">
+      <label for="ringtoneSelect" class="settings-label" style="display:block; margin-bottom: 5px; font-weight: 600; color: #4b5563;">Toque da Notificação:</label>
+      <select id="ringtoneSelect" class="select-ringtone">
+        <option value="default">Padrão (Google Beep)</option>
+        <option value="bmw-chime.mp3">🚗 BMW Chime</option>
+        <option value="check-mark_oPG7Xo5.mp3">✅ Concluído</option>
+        <option value="error_CDOxCYm.mp3">❌ Erro</option>
+        <option value="formula-1-radio-notification.mp3">🏎️ F1 Rádio</option>
+        <option value="police-radio-beep.mp3">🚓 Rádio</option>
+        <option value="stupid-f__king-bird.mp3">🔔 Sino de mesa</option>
+        <option value="zvuk-litvina.mp3">🇷🇺 Zvuk Litvina</option>
+      </select>
+    </div>
+
+    <div class="buttons-container">
+      <button class="btn-primary" id="openBtn">Abrir</button>
+      <button class="btn-secondary" id="closeBtn">Fechar</button>
+    </div>
+  </div>
+
+  <script src="../scripts/alert.js"></script>
+
+</body>
+
+</html>

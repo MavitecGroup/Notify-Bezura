@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Bezura Notification",
+  "version": "2.0.0",
+  "description": "Notificações de novas mensagens de leads no Bezura.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "alarms",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://app.bezura.com.br/*",
+    "https://*.bezura.com.br/*"
+  ],
+  "icons": {
+    "48": "assets/icons/bezura-icon.png",
+    "128": "assets/icons/bezura-icon.png"
+  },
+  "action": {
+    "default_popup": "ui/popup.html",
+    "default_title": "Configurações do Bezura"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://app.bezura.com.br/*"
+      ],
+      "js": [
+        "theme/theme.js",
+        "scripts/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "scripts/interceptor.js",
+        "assets/songs/*.mp3",
+        "assets/icons/*"
+      ],
+      "matches": [
+        "https://app.bezura.com.br/*",
+        "https://*.bezura.com.br/*"
+      ]
+    }
+  ]
+}
