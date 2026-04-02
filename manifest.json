@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Bezura Notification",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Notificações de novas mensagens de leads no Bezura.",
   "permissions": [
+    "tabs",
     "activeTab",
     "storage",
     "alarms",
@@ -11,7 +12,9 @@
   ],
   "host_permissions": [
     "https://app.bezura.com.br/*",
-    "https://*.bezura.com.br/*"
+    "https://*.bezura.com.br/*",
+    "https://cadastro.bezura.com.br/*",
+    "https://api.helena.run/*"
   ],
   "icons": {
     "48": "assets/icons/bezura-icon.png",
@@ -21,6 +24,7 @@
     "default_popup": "ui/popup.html",
     "default_title": "Configurações do Bezura"
   },
+  "options_page": "ui/options.html",
   "content_scripts": [
     {
       "matches": [

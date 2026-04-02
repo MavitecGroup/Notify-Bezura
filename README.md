@@ -1,4 +1,4 @@
-# 🔔 Notify-Bezura v2.0.0
+# 🔔 Notify-Bezura v2.1.0
 
 Bem-vindo à extensão oficial **Bezura Notification**! Esta ferramenta foi desenhada para revolucionar o atendimento do seu SaaS, oferecendo alertas precisos, controle sonoro e zero perdas de novos leads. 🚀
 
@@ -24,14 +24,22 @@ A extensão aprendeu a calar a boca quando não é necessária!
 ✔️ Se a origem de uma nova mensagem for um lead nas abas "Novos" ou "Outros", o alerta visual/sonoro será ignorado para focar apenas nas suas conversas ativas.
 ✔️ Se você **já estiver ativamente logado na aba 'Meus' e focado na tela**, a extensão entende que você já "viu" a mensagem e silenciará o toque para não te assustar à toa durante seu trabalho de digitação!
 
+### 🔗 4. Link do cadastro + Helena (v2.1.0)
+Com a aba ativa em uma URL do chat no formato `.../sessions/<UUID>...`, o popup monta automaticamente o link público **`https://cadastro.bezura.com.br/?<UUID>`** (sem nome de parâmetro, só `?` + UUID), alinhado ao fluxo do formulário de cadastro.
+
+- **Copiar** / **Abrir formulário** no próprio popup.
+- **Enviar link no chat (Helena)** (opcional): `POST https://api.helena.run/chat/v1/session/{id}/message` com corpo `{ "text": "..." }`, feito pelo service worker. O **Bearer token não fica no código**: configure em **Opções da extensão** (`ui/options.html`) → salvo em `chrome.storage.local` (`helenaApiToken`).
+
+**Segurança e CORS:** quem usa o mesmo perfil do navegador pode, em tese, inspecionar o armazenamento da extensão. Não commite tokens. Se a API Helena rejeitar requisições vindas da extensão, use só copiar o link ou um backend/proxy seu.
+
 ---
 
 ## 📦 Estrutura do Código:
 Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por função:
 
 - **`manifest.json`**: Regras da extensão no Chrome (inclui liberação de `.mp3` e ícones em `web_accessible_resources`).
-- **`scripts/`**: Lógica JavaScript — `background.js` (service worker), `content.js` (motor / poller), `interceptor.js` (captura do JWT na rede), `popup.js` e `alert.js`.
-- **`ui/`**: Páginas HTML — `popup.html` (ação da extensão) e `alert.html` (janela de notificação).
+- **`scripts/`**: `background.js` (service worker + fetch Helena), `content.js`, `interceptor.js`, `popup.js`, `alert.js`, `options.js`.
+- **`ui/`**: `popup.html` + `popup.css` (ação da extensão), `alert.html`, `options.html` (token Helena).
 - **`theme/`**: `theme.js` — tema premium injetado no app Bezura.
 - **`assets/icons/`** e **`assets/songs/`**: Ícones, logos e toques em `.mp3`.
 - **`releases/`**: Pacotes `.zip` de versões anteriores (opcional).
@@ -55,10 +63,12 @@ Na raiz ficam só `manifest.json` e `README.md`; o restante está agrupado por f
   - Correção primária nas permissões do `storage` exigidas pela Web Store do Google. Primeira tela de interruptor simples implementada no popup.
 - **v1.2.0**:
   - Restrição inteligente contra sons repetitivos e mensagens falsas na DOM. Restrição de barulhos se a aba atual está focada e visível (`document.hasFocus()`).
-- **v2.0.0** *(Atual)*:
+- **v2.0.0**:
   - **Reescrita Arquitetural:** Mudança revolucionária de web-scrape para um "API Poller Invisível" capaz de detectar abas independentemente da renderização visual graças ao script pescador `interceptor.js`.
   - **Sons Customizáveis:** Acoplada a capacidade do sistema ler `assets/songs/` e lista retrátil pra escolha de mp3 pelo próprio atendente.
   - **Action Popup & Premium Theme:** Transformação com Menu Master para desativar 100% o motor. E botão "Tema Personalizado" que aplica visual Premium "Neon" V2.0 e injeta Botões Iframe nativos direto no front End do Bezura!
+- **v2.1.0** *(Atual)*:
+  - Link automático para `cadastro.bezura.com.br/?<sessionId>` a partir da URL do chat; copiar, abrir e envio opcional via API Helena com token nas opções.
 
 ---
 _A escalabilidade do seu atendimento está salva! Qualquer dúvida ou pedido de novas features, basta realizar um update._ 🛡️✨

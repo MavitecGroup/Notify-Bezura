@@ -166,8 +166,56 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("[Bezura Notification] Extensão instalada/atualizada.");
 });
 
+const HELENA_TOKEN_KEY = 'helenaApiToken';
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("[Bezura Notification] Mensagem recebida no background:", message, "de", sender);
+
+  if (message && message.type === 'HELENA_SEND_REGISTRATION_LINK') {
+    const { sessionId, registrationUrl } = message;
+    if (!sessionId || !registrationUrl) {
+      sendResponse({ ok: false, error: 'sessionId ou registrationUrl ausente.' });
+      return false;
+    }
+    chrome.storage.local.get([HELENA_TOKEN_KEY], (res) => {
+      const token = res[HELENA_TOKEN_KEY];
+      if (!token || !String(token).trim()) {
+        sendResponse({
+          ok: false,
+          error: 'Configure o token Helena nas opções da extensão.'
+        });
+        return;
+      }
+      const bodyText = `Para concluir seu cadastro, acesse: ${registrationUrl}`;
+      const url = `https://api.helena.run/chat/v1/session/${encodeURIComponent(sessionId)}/message`;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${String(token).trim()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: bodyText })
+      })
+        .then(async (r) => {
+          if (!r.ok) {
+            const t = await r.text();
+            sendResponse({
+              ok: false,
+              error: `HTTP ${r.status}: ${t.slice(0, 240)}`
+            });
+            return;
+          }
+          sendResponse({ ok: true });
+        })
+        .catch((err) => {
+          sendResponse({
+            ok: false,
+            error: err && err.message ? err.message : String(err)
+          });
+        });
+    });
+    return true;
+  }
 
   if (message && message.type === 'storeCookies') {
     // store a cookie string for later use by poller
