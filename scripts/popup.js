@@ -28,33 +28,9 @@ function buildCadastroUrl(sessionId) {
   return `${CADASTRO_ORIGIN}/?${sessionId}`;
 }
 
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      const ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      return ok;
-    } catch {
-      document.body.removeChild(ta);
-      return false;
-    }
-  }
-}
-
 function refreshCadastroUI(state) {
   const errEl = document.getElementById('cadastroErr');
   const input = document.getElementById('cadastroLink');
-  const btnCopiar = document.getElementById('btnCopiarCadastro');
   const btnAbrir = document.getElementById('btnAbrirCadastro');
   const btnSendChat = document.getElementById('btnSendChat');
   const statusEl = document.getElementById('cadastroStatus');
@@ -62,7 +38,6 @@ function refreshCadastroUI(state) {
   if (!state.sessionId) {
     errEl.classList.add('visible');
     input.value = '';
-    btnCopiar.disabled = true;
     btnAbrir.disabled = true;
     btnSendChat.disabled = true;
     statusEl.textContent = '';
@@ -73,7 +48,6 @@ function refreshCadastroUI(state) {
   errEl.classList.remove('visible');
   const link = buildCadastroUrl(state.sessionId);
   input.value = link;
-  btnCopiar.disabled = false;
   btnAbrir.disabled = false;
   btnSendChat.disabled = !state.hasBezuraApiToken;
 }
@@ -88,6 +62,14 @@ function loadActiveTabCadastro() {
       const tab = tabs && tabs[0];
       const sessionId = extractSessionId(tab && tab.url);
       resolve({ sessionId, tabUrl: tab && tab.url });
+    });
+  });
+}
+
+function getTokenFromChromeStorage() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([BEZURA_API_TOKEN_KEY, LEGACY_API_TOKEN_KEY], (r) => {
+      resolve(tokenFromStorage(r));
     });
   });
 }
@@ -124,45 +106,43 @@ document.addEventListener('DOMContentLoaded', () => {
       : 'Para enviar pelo chat, configure o token em Opções.';
   }
 
-  document.getElementById('btnGerarCadastro').addEventListener('click', () => {
+  /** Re-lê a aba ativa, atualiza o campo e devolve sessionId/token atuais. */
+  async function refreshLinkFromActiveTab() {
+    const tok = await getTokenFromChromeStorage();
+    const { sessionId } = await loadActiveTabCadastro();
+    refreshCadastroUI({ sessionId, hasBezuraApiToken: !!tok });
+    hintBezuraToken.textContent = tok ? '' : 'Para enviar pelo chat, configure o token em Opções.';
+    return { sessionId, tok };
+  }
+
+  document.getElementById('btnAbrirCadastro').addEventListener('click', async () => {
     statusEl.textContent = '';
     statusEl.className = 'cadastro-status';
-    chrome.storage.local.get([BEZURA_API_TOKEN_KEY, LEGACY_API_TOKEN_KEY], (r) => {
-      runCadastroRefresh(tokenFromStorage(r));
-    });
-  });
-
-  document.getElementById('btnCopiarCadastro').addEventListener('click', async () => {
-    const v = document.getElementById('cadastroLink').value.trim();
-    if (!v) return;
-    const ok = await copyText(v);
-    statusEl.textContent = ok ? 'Link copiado.' : 'Não foi possível copiar.';
-    statusEl.className = ok ? 'cadastro-status ok' : 'cadastro-status err';
-  });
-
-  document.getElementById('btnAbrirCadastro').addEventListener('click', () => {
-    const v = document.getElementById('cadastroLink').value.trim();
-    if (!v) return;
-    chrome.tabs.create({ url: v });
-  });
-
-  document.getElementById('btnSendChat').addEventListener('click', () => {
-    const registrationUrl = document.getElementById('cadastroLink').value.trim();
-    const prefix = `${CADASTRO_ORIGIN}/?`;
-    if (!registrationUrl.startsWith(prefix)) {
-      statusEl.textContent = 'Gere o link antes de enviar.';
+    const { sessionId } = await refreshLinkFromActiveTab();
+    if (!sessionId) {
+      statusEl.textContent = 'Abra uma aba do chat com /sessions/... na URL.';
       statusEl.className = 'cadastro-status err';
       return;
     }
-    const sessionId = registrationUrl.slice(prefix.length);
-    const uuidRe =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRe.test(sessionId)) {
-      statusEl.textContent = 'UUID inválido no link.';
+    chrome.tabs.create({ url: buildCadastroUrl(sessionId) });
+  });
+
+  document.getElementById('btnSendChat').addEventListener('click', async () => {
+    statusEl.textContent = '';
+    statusEl.className = 'cadastro-status';
+    const { sessionId, tok } = await refreshLinkFromActiveTab();
+    if (!sessionId) {
+      statusEl.textContent = 'Abra uma aba do chat com /sessions/... na URL.';
+      statusEl.className = 'cadastro-status err';
+      return;
+    }
+    if (!tok) {
+      statusEl.textContent = 'Configure o token em Opções.';
       statusEl.className = 'cadastro-status err';
       return;
     }
 
+    const registrationUrl = buildCadastroUrl(sessionId);
     statusEl.textContent = 'Enviando…';
     statusEl.className = 'cadastro-status';
 
